@@ -1,0 +1,213 @@
+/*
+ * Calendar.css contains overrides for FullCalendar styles as well as
+ * custom layout for the scheduler.  The goal is to achieve a clean,
+ * professional appearance similar to Outlook or Microsoft Calendar.
+ */
+
+.calendar-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: sans-serif;
+}
+
+/* Override FullCalendar event styles.  We remove the default background
+   and border so our custom renderer can apply its own styling.  The
+   cursor remains a pointer to indicate interactivity. */
+.fc .fc-event {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.fc .fc-timegrid-slot {
+  /* Increase slot height for readability */
+  height: 3rem;
+}
+
+.fc .fc-timegrid-slot-label {
+  color: #9ca3af;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+/* Resource column headers */
+.fc .fc-col-header-cell {
+  background: #f7f9fc;
+  border: none;
+  padding: 8px;
+  font-weight: 600;
+}
+
+/* Remove default borders for a cleaner look */
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid-section,
+.fc .fc-scrollgrid-section>* {
+  border: none !important;
+}
+
+/* Add subtle horizontal lines */
+.fc .fc-timegrid-slot {
+  border-bottom: 1px solid #e5e9f0;
+}
+
+/* Highlight the now indicator */
+.fc .fc-timegrid-now-indicator-line {
+  background: #e03131;
+}
+
+/* -----------------------------------------------------------------
+ * Resource header row styles
+ *
+ * This row sits above the scheduler and mirrors FullCalendar’s
+ * column layout.  Each resource cell displays the resource title,
+ * associated people chips and action icons.  A colored bar across
+ * the top of each cell matches the primary accent color.
+ */
+
+.resource-row {
+  display: flex;
+  border-bottom: 1px solid #e5e9f0;
+  background-color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow-x: auto;
+}
+
+.resource-cell {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0.5rem 0.75rem;
+  border-right: 1px solid #e5e9f0;
+  border-bottom: 2px solid #4590eb;
+}
+
+.resource-cell:last-child {
+  border-right: none;
+}
+
+.resource-content {
+  flex-grow: 1;
+}
+
+.resource-title {
+  color: #4590eb;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.resource-people {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.25rem;
+}
+
+.person-chip {
+  display: flex;
+  align-items: center;
+  background-color: #e6f4ea;
+  color: #12633b;
+  border-radius: 12px;
+  padding: 0 6px;
+  font-size: 0.65rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.arrow-down {
+  margin-left: 4px;
+}
+
+.add-people-btn {
+  background-color: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0 4px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #374151;
+}
+
+.add-people-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.remove-column-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.remove-column-btn:hover {
+  color: #e03131;
+}
+
+/* -----------------------------------------------------------------
+ * Custom event styles
+ *
+ * Event content is rendered via the eventContent callback.  We apply
+ * our own border and background inside the event element.  A thicker
+ * border on the left matches the accent color used elsewhere.
+ */
+
+.custom-event {
+  background-color: #f5f7f8;
+  border: 1px solid #7db1f0;
+  border-left: 3px solid #7db1f0;
+  border-radius: 4px;
+  padding: 4px 6px; /* vertical padding added for better fill */
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: #1f2937;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+  /* Add these */
+  height: 96%;
+  width: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-event .event-time {
+  font-weight: 600;
+  font-size: 0.7rem;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.custom-event .event-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.custom-event .event-detail {
+  color: #6b7280;
+  font-size: 0.65rem;
+}
+
+/* Override current day highlight background */
+.fc .fc-daygrid-day.fc-day-today,
+.fc .fc-timegrid-col.fc-day-today,
+.fc .fc-resource-timeline-day.fc-day-today {
+  background-color: #fcfefe !important;
+  /* Light blue */
+}
+
+.fc-col-header,
+.fc-col-header-cell.fc-resource {
+  display: none !important;
+}

@@ -1,0 +1,70 @@
+/*
+ * Simplified header styles for the day view.  The header consists of
+ * navigation arrows, a date display and two vertically stacked action
+ * buttons aligned to the right.  Static elements from the previous
+ * design such as an avatar and extra pickers have been removed.
+ */
+
+ .calendar-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e9f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+}
+
+/* Navigation container: holds the arrows and date label. */
+.header-nav {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+/* Date text styling */
+.date-display {
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 2.5px;
+}
+
+/* Navigation buttons: simple arrow icons. */
+.nav-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #374151;
+  padding: 0.1rem 0.4rem;
+  line-height: 1;
+}
+.nav-button:hover {
+  color: #007aff;
+}
+
+/* Container for action buttons.  Align items to end to stack vertically. */
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* New event and add column buttons share similar styling. */
+.new-event-button,
+.add-column-button {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.45rem 1rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.new-event-button:hover,
+.add-column-button:hover {
+  background-color: #005cbf;
+}
