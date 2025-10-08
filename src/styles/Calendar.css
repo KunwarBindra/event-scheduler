@@ -1,19 +1,23 @@
 /*
  * Calendar.css contains overrides for FullCalendar styles as well as
- * custom layout for the scheduler.  The goal is to achieve a clean,
+ * custom layout for the scheduler. The goal is to achieve a clean,
  * professional appearance similar to Outlook or Microsoft Calendar.
  */
 
-.calendar-page {
+ .calendar-page {
   display: flex;
   flex-direction: column;
   height: 100vh;
   font-family: sans-serif;
 }
 
-/* Override FullCalendar event styles.  We remove the default background
-   and border so our custom renderer can apply its own styling.  The
-   cursor remains a pointer to indicate interactivity. */
+/* New: container that lets the calendar fill remaining space */
+.calendar-wrap {
+  flex: 1 1 auto;
+  min-height: 0; /* important so inner scrollers can shrink within flex parents */
+}
+
+/* Override FullCalendar event styles — we render custom content */
 .fc .fc-event {
   background: transparent;
   border: none;
@@ -21,18 +25,19 @@
   cursor: pointer;
 }
 
+/* Slots */
 .fc .fc-timegrid-slot {
-  /* Increase slot height for readability */
-  height: 3rem;
+  height: 3rem; /* more readable */
+  border-bottom: 1px solid #e5e9f0; /* subtle lines */
 }
 
 .fc .fc-timegrid-slot-label {
   color: #9ca3af;
   vertical-align: top;
-  font-size: 14px;
+  font-size: 12px;
 }
 
-/* Resource column headers */
+/* Resource column headers (FC’s own header is hidden below) */
 .fc .fc-col-header-cell {
   background: #f7f9fc;
   border: none;
@@ -43,13 +48,8 @@
 /* Remove default borders for a cleaner look */
 .fc .fc-scrollgrid,
 .fc .fc-scrollgrid-section,
-.fc .fc-scrollgrid-section>* {
+.fc .fc-scrollgrid-section > * {
   border: none !important;
-}
-
-/* Add subtle horizontal lines */
-.fc .fc-timegrid-slot {
-  border-bottom: 1px solid #e5e9f0;
 }
 
 /* Highlight the now indicator */
@@ -58,13 +58,8 @@
 }
 
 /* -----------------------------------------------------------------
- * Resource header row styles
- *
- * This row sits above the scheduler and mirrors FullCalendar’s
- * column layout.  Each resource cell displays the resource title,
- * associated people chips and action icons.  A colored bar across
- * the top of each cell matches the primary accent color.
- */
+ * Custom resource header row (mirrors FC columns)
+ * ----------------------------------------------------------------- */
 
 .resource-row {
   display: flex;
@@ -73,6 +68,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   overflow-x: auto;
+  flex: 0 0 auto; /* don’t grow; acts like a fixed-height strip */
 }
 
 .resource-cell {
@@ -82,6 +78,8 @@
   padding: 0.5rem 0.75rem;
   border-right: 1px solid #e5e9f0;
   border-bottom: 2px solid #4590eb;
+  /* width is set dynamically via JS to match FC columns */
+  box-sizing: border-box;
 }
 
 .resource-cell:last-child {
@@ -154,25 +152,19 @@
 }
 
 /* -----------------------------------------------------------------
- * Custom event styles
- *
- * Event content is rendered via the eventContent callback.  We apply
- * our own border and background inside the event element.  A thicker
- * border on the left matches the accent color used elsewhere.
- */
+ * Custom event card styles
+ * ----------------------------------------------------------------- */
 
 .custom-event {
   background-color: #f5f7f8;
   border: 1px solid #7db1f0;
   border-left: 3px solid #7db1f0;
   border-radius: 4px;
-  padding: 4px 6px; /* vertical padding added for better fill */
+  padding: 4px 6px;
   font-size: 0.72rem;
   line-height: 1.2;
   color: #1f2937;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
-
-  /* Add these */
   height: 96%;
   width: 100%;
   overflow: auto;
@@ -199,15 +191,42 @@
   font-size: 0.65rem;
 }
 
-/* Override current day highlight background */
+/* Current day highlight background (subtle) */
 .fc .fc-daygrid-day.fc-day-today,
 .fc .fc-timegrid-col.fc-day-today,
 .fc .fc-resource-timeline-day.fc-day-today {
   background-color: #fcfefe !important;
-  /* Light blue */
 }
 
+/* Hide FC’s native col header since we use a custom mirrored header */
 .fc-col-header,
 .fc-col-header-cell.fc-resource {
   display: none !important;
+}
+
+/* Make FullCalendar's resize handles obvious & easy to grab */
+.fc-timegrid-event .fc-event-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;            /* larger hit area */
+  opacity: 0.7;
+  background: transparent; /* keep transparent until hover */
+}
+
+.fc-timegrid-event .fc-event-resizer-start {
+  top: -3px;
+  cursor: ns-resize;
+}
+
+.fc-timegrid-event .fc-event-resizer-end {
+  bottom: -3px;
+  cursor: ns-resize;
+}
+
+/* Optional: show a subtle line on hover to indicate grip zones */
+.fc-timegrid-event:hover .fc-event-resizer-start,
+.fc-timegrid-event:hover .fc-event-resizer-end {
+  background: rgba(69, 144, 235, 0.35); /* matches your accent */
+  border-radius: 2px;
 }
