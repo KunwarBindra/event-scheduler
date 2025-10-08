@@ -230,3 +230,59 @@
   background: rgba(69, 144, 235, 0.35); /* matches your accent */
   border-radius: 2px;
 }
+
+/* Prevent text selection while horizontally dragging */
+.no-select {
+  user-select: none !important;
+}
+
+/* Horizontal span handles (left/right edges) */
+.h-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;             /* easy to grab */
+  opacity: 0;              /* invisible until hover */
+  background: transparent;
+  cursor: ew-resize;
+  z-index: 2;              /* above event content */
+}
+
+.h-resize-handle--left {
+  left: 0;
+}
+
+.h-resize-handle--right {
+  right: 0;
+}
+
+/* Show a subtle grip on hover so users discover the affordance */
+.custom-event:hover .h-resize-handle--left,
+.custom-event:hover .h-resize-handle--right {
+  opacity: 1;
+  background: rgba(69, 144, 235, 0.12); /* soft blue to match accent */
+}
+
+/* Keep existing vertical resize handles working */
+.fc-timegrid-event .fc-event-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8px;
+  opacity: 0.7;
+  background: transparent;
+}
+.fc-timegrid-event .fc-event-resizer-start {
+  top: -3px;
+  cursor: ns-resize;
+}
+
+.fc-timegrid-event .fc-event-resizer-end {
+  bottom: -3px;
+  cursor: ns-resize;
+}
+.fc-timegrid-event:hover .fc-event-resizer-start,
+.fc-timegrid-event:hover .fc-event-resizer-end {
+  background: rgba(69, 144, 235, 0.35);
+  border-radius: 2px;
+}

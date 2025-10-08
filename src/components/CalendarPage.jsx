@@ -76,6 +76,15 @@ const CalendarPage = () => {
 
   const calendarRef = useRef(null);
 
+  // Holds the in-progress horizontal resize
+  const hDragRef = useRef({
+    active: false,
+    eventId: null,
+    direction: null, // 'left' | 'right'
+    anchorIdx: null, // fixed boundary index
+    rects: [],       // DOMRects for resource columns (excluding time gutter)
+  });
+
   // Compute default scroll time = two hours before now (clamped to 00:00:00 if previous day)
   const defaultScrollTime = useMemo(() => {
     const now = new Date();
@@ -102,6 +111,9 @@ const CalendarPage = () => {
         end: new Date(Math.min(evt.end.getTime(), dayEnd.getTime())),
       }));
   }, [events, currentDate]);
+
+  // Put these near your other hooks/helpers
+  const resourceOrder = useMemo(() => resources.map(r => r.id), [resources]);
 
   /** Keep a single function that syncs the custom resource header with FC columns. */
   const syncResourceHeader = () => {
@@ -169,6 +181,31 @@ const CalendarPage = () => {
     const scrollTop = numberOfSlots * slotHeight;
     const scroller = findScroller(firstSlot);
     if (scroller) scroller.scrollTop = scrollTop;
+  };
+
+  const getResourceRects = () => {
+    // .fc-timegrid-col includes [0]=time gutter; resources start at 1
+    const allCols = Array.from(document.querySelectorAll('.fc-timegrid-col'));
+    return allCols.slice(1).map((el) => el.getBoundingClientRect());
+  };
+
+  const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val));
+
+  const buildSpanIds = (startIdx, endIdx) => {
+    const lo = Math.min(startIdx, endIdx);
+    const hi = Math.max(startIdx, endIdx);
+    return resourceOrder.slice(lo, hi + 1);
+  };
+
+  const idxForClientX = (clientX, rects) => {
+    if (!rects.length) return -1;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      if (clientX >= r.left && clientX <= r.right) return i;
+    }
+    // Outside bounds: clamp to nearest edge
+    if (clientX < rects[0].left) return 0;
+    return rects.length - 1;
   };
 
   /* -------------------------- Effects & listeners -------------------------- */
@@ -250,6 +287,72 @@ const CalendarPage = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  const startHorizontalResize = (fcEvent, direction, mouseDownEvent) => {
+    mouseDownEvent.preventDefault();
+    mouseDownEvent.stopPropagation();
+
+    const currentIds = fcEvent.getResources().map((r) => r.id);
+    if (!currentIds.length) return;
+
+    // Current contiguous span indices
+    const indices = currentIds.map((id) => resourceOrder.indexOf(id)).filter((i) => i >= 0);
+    const minIdx = Math.min(...indices);
+    const maxIdx = Math.max(...indices);
+
+    const rects = getResourceRects();
+    if (!rects.length) return;
+
+    hDragRef.current = {
+      active: true,
+      eventId: fcEvent.id,
+      direction,
+      anchorIdx: direction === 'left' ? maxIdx : minIdx, // opposite edge is fixed
+      rects,
+    };
+
+    document.body.classList.add('no-select');
+    document.body.style.cursor = 'ew-resize';
+
+    const onMove = (e) => {
+      if (!hDragRef.current.active) return;
+      const { anchorIdx, rects } = hDragRef.current;
+
+      // Which resource column is the cursor over?
+      const overIdxRaw = idxForClientX(e.clientX, rects);
+      const overIdx = clamp(overIdxRaw, 0, resourceOrder.length - 1);
+
+      // Determine new span
+      let startIdx, endIdx;
+      if (hDragRef.current.direction === 'left') {
+        startIdx = Math.min(overIdx, anchorIdx);
+        endIdx = anchorIdx;
+      } else {
+        startIdx = anchorIdx;
+        endIdx = Math.max(overIdx, anchorIdx);
+      }
+
+      const newIds = buildSpanIds(startIdx, endIdx);
+
+      // Live preview by updating React state for the specific event
+      setEvents((prev) =>
+        prev.map((evt) => (evt.id === hDragRef.current.eventId ? { ...evt, resourceIds: newIds } : evt))
+      );
+    };
+
+    const onUp = () => {
+      // Commit already happened via setEvents on move; just cleanup
+      hDragRef.current.active = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('no-select');
+      document.body.style.cursor = '';
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   /* ------------------------------ Handlers ------------------------------ */
 
@@ -358,8 +461,23 @@ const CalendarPage = () => {
     const startStr = start.toLocaleTimeString('en-US', timeOptions);
     const endStr = end.toLocaleTimeString('en-US', timeOptions);
     const details = event.extendedProps?.details || [];
+
     return (
       <div className="custom-event">
+        {/* Horizontal span handles */}
+        <div
+          className="h-resize-handle h-resize-handle--left"
+          onMouseDown={(e) => startHorizontalResize(event, 'left', e)}
+          title="Expand to the left resource"
+          aria-label="Expand to the left resource"
+        />
+        <div
+          className="h-resize-handle h-resize-handle--right"
+          onMouseDown={(e) => startHorizontalResize(event, 'right', e)}
+          title="Expand to the right resource"
+          aria-label="Expand to the right resource"
+        />
+
         <div className="event-time">{`${startStr} - ${endStr}`}</div>
         <div className="event-title">{event.title}</div>
         {details.map((line, idx) => (
