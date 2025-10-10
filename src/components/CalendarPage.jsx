@@ -8,6 +8,8 @@ import EventModal from './EventModal';
 import { addMinutes } from '../lib/calendarUtils';
 import AddColumnModal from './AddColumnModal';
 import AddPeopleModal from './AddPeopleModal';
+import SaveTemplateModal from './SaveTemplateModal';
+
 
 import '../styles/Calendar.css';
 
@@ -83,6 +85,8 @@ const CalendarPage = () => {
 
   const [peopleModalOpen, setPeopleModalOpen] = useState(false);
   const [peopleModalResourceId, setPeopleModalResourceId] = useState(null);
+
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
 
   // replace old handleAddColumn with this:
   const openAddColumnModal = () => setAddColOpen(true);
@@ -225,21 +229,27 @@ const CalendarPage = () => {
     return d;
   };
 
-  // Save visible events as a named template
-  const handleSaveTemplate = () => {
-    const name = window.prompt('Template name:', `Template – ${formatDayLabel(currentDate)}`);
+  // Open the title-only modal
+  const handleSaveTemplate = () => setSaveTplOpen(true);
+
+  // Persist as a SINGLE-DAY template using visibleEvents
+  const confirmSaveTemplate = (name) => {
     if (!name) return;
 
-    // Save minimal, day-relative shape
-    const tplItems = visibleEvents.map((e) => ({
+    const items = visibleEvents.map((e) => ({
       title: e.title,
       resourceIds: Array.isArray(e.resourceIds) ? e.resourceIds : (e.extendedProps?.resourceIds || []),
-      startHM: toHM(e.start),
-      endHM: toHM(e.end),
+      startHM: { h: e.start.getHours(), m: e.start.getMinutes() },
+      endHM: { h: e.end.getHours(), m: e.end.getMinutes() },
       extendedProps: e.extendedProps || {},
     }));
 
-    setTemplates((prev) => ({ ...prev, [name.trim()]: tplItems }));
+    setTemplates((prev) => ({
+      ...prev,
+      [name]: { type: 'single', items }
+    }));
+
+    setSaveTplOpen(false);
   };
 
   // Apply a template to the CURRENT date (append to existing events)
@@ -693,6 +703,17 @@ const CalendarPage = () => {
           initialSelected={resources.find(r => r.id === peopleModalResourceId)?.people || []}
           onCancel={() => { setPeopleModalOpen(false); setPeopleModalResourceId(null); }}
           onSave={handleSavePeople}
+        />
+      )}
+
+      {saveTplOpen && (
+        <SaveTemplateModal
+          open={saveTplOpen}
+          defaultName={`Template – ${currentDate.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          })}`}
+          onCancel={() => setSaveTplOpen(false)}
+          onSave={confirmSaveTemplate}
         />
       )}
     </div>

@@ -109,7 +109,7 @@ const CalendarHeader = ({
             onClick={() => setMenuOpen((v) => !v)}
             title="Templates"
           >
-            Templates
+            Agenda Templates
             <span className="caret" aria-hidden>▾</span>
           </button>
 
@@ -144,7 +144,7 @@ const CalendarHeader = ({
                     >
                       {/* tiny trash can (unicode/emoji fallback) */}
                       <svg viewBox="0 0 24 24" className="trash" width="16" height="16" aria-hidden>
-                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 9h2v9H6V9z" fill="currentColor"/>
+                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 9h2v9H6V9z" fill="currentColor" />
                       </svg>
                     </button>
                   </div>

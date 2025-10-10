@@ -24,6 +24,8 @@
 }
 
 .stm-body {
+    display: flex;
+    flex-direction: column;
     padding: 16px 18px;
 }
 
