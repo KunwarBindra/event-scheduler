@@ -10,7 +10,6 @@ import { addMinutes } from '../lib/calendarUtils';
 import '../styles/Calendar.css';
 
 /* ------------------------------ Static data ------------------------------ */
-/** Keep initial events outside the component to avoid re-allocation on re-renders. */
 const INITIAL_EVENTS = [
   {
     id: 'e1',
@@ -49,7 +48,6 @@ const INITIAL_EVENTS = [
 ];
 
 /* ------------------------------ Component ------------------------------ */
-
 const CalendarPage = () => {
   const [events, setEvents] = useState(INITIAL_EVENTS);
   const [eventIdCounter, setEventIdCounter] = useState(INITIAL_EVENTS.length + 1);
@@ -57,15 +55,14 @@ const CalendarPage = () => {
 
   const [resources, setResources] = useState([
     { id: '1', title: 'Generalist', people: ['Kunwar'] },
-    {
-      id: '2',
-      title: 'Clinical',
-      people: ['Robert', 'Sona', 'Munavar'],
-    },
+    { id: '2', title: 'Clinical', people: ['Robert', 'Sona', 'Munavar'] },
     { id: '3', title: 'Physical Environment', people: ['Joblin'] },
   ]);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Templates (persisted to localStorage)
+  const [templates, setTemplates] = useState({}); // { [name]: TemplateItem[] }
 
   // Modal state
   const [isModalOpen, setModalOpen] = useState(false);
@@ -76,16 +73,16 @@ const CalendarPage = () => {
 
   const calendarRef = useRef(null);
 
-  // Holds the in-progress horizontal resize
+  // Horizontal-resize (future feature – kept as-is)
   const hDragRef = useRef({
     active: false,
     eventId: null,
-    direction: null, // 'left' | 'right'
-    anchorIdx: null, // fixed boundary index
-    rects: [],       // DOMRects for resource columns (excluding time gutter)
+    direction: null,
+    anchorIdx: null,
+    rects: [],
   });
 
-  // Compute default scroll time = two hours before now (clamped to 00:00:00 if previous day)
+  // Default scroll time
   const defaultScrollTime = useMemo(() => {
     const now = new Date();
     const scrollDate = new Date(now);
@@ -95,8 +92,6 @@ const CalendarPage = () => {
   }, []);
 
   /* ------------------------------ Helpers ------------------------------ */
-
-  /** Clamp events to visible day bounds to avoid cross-day render issues. */
   const visibleEvents = useMemo(() => {
     const dayStart = new Date(currentDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -104,7 +99,7 @@ const CalendarPage = () => {
     dayEnd.setDate(dayEnd.getDate() + 1);
 
     return events
-      .filter((evt) => evt.start < dayEnd && evt.end > dayStart) // overlaps the day
+      .filter((evt) => evt.start < dayEnd && evt.end > dayStart)
       .map((evt) => ({
         ...evt,
         start: new Date(Math.max(evt.start.getTime(), dayStart.getTime())),
@@ -112,19 +107,16 @@ const CalendarPage = () => {
       }));
   }, [events, currentDate]);
 
-  // Put these near your other hooks/helpers
-  const resourceOrder = useMemo(() => resources.map(r => r.id), [resources]);
+  const resourceOrder = useMemo(() => resources.map((r) => r.id), [resources]);
 
-  /** Keep a single function that syncs the custom resource header with FC columns. */
   const syncResourceHeader = () => {
-    const fcCols = document.querySelectorAll('.fc-timegrid-col'); // includes time gutter at index 0
+    const fcCols = document.querySelectorAll('.fc-timegrid-col'); // includes time gutter at [0]
     const customCols = document.querySelectorAll('.resource-cell');
     const resourceRow = document.querySelector('.resource-row');
     if (!fcCols.length || !customCols.length || !resourceRow) return;
 
-    // Align resource cells to match FC resource columns (skip gutter)
     for (let i = 0; i < customCols.length; i++) {
-      const fcCol = fcCols[i + 1]; // skip the first one (time gutter)
+      const fcCol = fcCols[i + 1]; // skip gutter
       const customCol = customCols[i];
       if (fcCol && customCol) {
         const w = fcCol.getBoundingClientRect().width;
@@ -132,27 +124,24 @@ const CalendarPage = () => {
       }
     }
 
-    // Shift the entire custom resource row to account for the time gutter width
     const timeGutterCol = fcCols[0];
     if (timeGutterCol) {
       resourceRow.style.marginLeft = `${timeGutterCol.getBoundingClientRect().width}px`;
     }
   };
 
-  /** Manual scroll fallback to "current time minus 2 hours" if native scroll misses. */
   const scrollToCurrentTimeMinusTwoHours = () => {
     const api = calendarRef.current?.getApi?.();
     if (!api) return;
     const calEl = api.el;
     if (!calEl) return;
 
-    // Build time selectors. FullCalendar's data-time can be HH:mm or HH:mm:ss.
     const target = new Date();
     target.setMinutes(target.getMinutes() - 120);
     const hh = String(target.getHours()).padStart(2, '0');
     const mm = String(target.getMinutes()).padStart(2, '0');
-    const timeAttrCandidates = [`${hh}:${mm}:00`, `${hh}:${mm}`];
 
+    const timeAttrCandidates = [`${hh}:${mm}:00`, `${hh}:${mm}`];
     let slotEl = null;
     for (const t of timeAttrCandidates) {
       slotEl = calEl.querySelector(`[data-time='${t}']`);
@@ -172,61 +161,119 @@ const CalendarPage = () => {
       }
     }
 
-    // Fallback by slot height math
     const firstSlot = calEl.querySelector('.fc-timegrid-slot');
     if (!firstSlot) return;
     const slotHeight = firstSlot.getBoundingClientRect().height;
     let minutesFromMidnight = Math.max(0, target.getHours() * 60 + target.getMinutes());
-    const numberOfSlots = minutesFromMidnight / 30; // 30 min slots
+    const numberOfSlots = minutesFromMidnight / 30;
     const scrollTop = numberOfSlots * slotHeight;
     const scroller = findScroller(firstSlot);
     if (scroller) scroller.scrollTop = scrollTop;
   };
 
-  const getResourceRects = () => {
-    // .fc-timegrid-col includes [0]=time gutter; resources start at 1
-    const allCols = Array.from(document.querySelectorAll('.fc-timegrid-col'));
-    return allCols.slice(1).map((el) => el.getBoundingClientRect());
-  };
+  /* ------------------------------ Template utils ------------------------------ */
 
-  const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val));
-
-  const buildSpanIds = (startIdx, endIdx) => {
-    const lo = Math.min(startIdx, endIdx);
-    const hi = Math.max(startIdx, endIdx);
-    return resourceOrder.slice(lo, hi + 1);
-  };
-
-  const idxForClientX = (clientX, rects) => {
-    if (!rects.length) return -1;
-    for (let i = 0; i < rects.length; i++) {
-      const r = rects[i];
-      if (clientX >= r.left && clientX <= r.right) return i;
+  // Load templates from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('calendarTemplates');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') setTemplates(parsed);
+      }
+    } catch (_) {
+      // ignore bad JSON
     }
-    // Outside bounds: clamp to nearest edge
-    if (clientX < rects[0].left) return 0;
-    return rects.length - 1;
+  }, []);
+
+  // Persist whenever templates change
+  useEffect(() => {
+    try {
+      localStorage.setItem('calendarTemplates', JSON.stringify(templates));
+    } catch (_) {
+      // storage full / disabled – silently ignore
+    }
+  }, [templates]);
+
+  // Human date (e.g., "Oct 10, 2025") for default template name
+  const formatDayLabel = (d) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Convert a Date to {h,m}
+  const toHM = (d) => ({ h: d.getHours(), m: d.getMinutes() });
+
+  // Build a Date for the current day from {h,m}
+  const fromHMOnDate = (hm, day) => {
+    const d = new Date(day);
+    d.setHours(hm.h, hm.m, 0, 0);
+    return d;
+  };
+
+  // Save visible events as a named template
+  const handleSaveTemplate = () => {
+    const name = window.prompt('Template name:', `Template – ${formatDayLabel(currentDate)}`);
+    if (!name) return;
+
+    // Save minimal, day-relative shape
+    const tplItems = visibleEvents.map((e) => ({
+      title: e.title,
+      resourceIds: Array.isArray(e.resourceIds) ? e.resourceIds : (e.extendedProps?.resourceIds || []),
+      startHM: toHM(e.start),
+      endHM: toHM(e.end),
+      extendedProps: e.extendedProps || {},
+    }));
+
+    setTemplates((prev) => ({ ...prev, [name.trim()]: tplItems }));
+  };
+
+  // Apply a template to the CURRENT date (append to existing events)
+  const handleApplyTemplate = (name) => {
+    const tpl = templates?.[name];
+    if (!tpl || !Array.isArray(tpl)) return;
+
+    const newEvents = tpl.map((t) => {
+      const id = `e${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const start = fromHMOnDate(t.startHM, currentDate);
+      const end = fromHMOnDate(t.endHM, currentDate);
+      return {
+        id,
+        title: t.title,
+        start,
+        end,
+        resourceIds: t.resourceIds || [],
+        extendedProps: t.extendedProps || { details: [] },
+      };
+    });
+
+    setEvents((prev) => {
+      // Ensure unique IDs and advance counter roughly
+      setEventIdCounter((c) => c + newEvents.length);
+      return [...prev, ...newEvents];
+    });
+  };
+
+  // Optional convenience: remove a template
+  const handleDeleteTemplate = (name) => {
+    setTemplates((prev) => {
+      const copy = { ...prev };
+      delete copy[name];
+      return copy;
+    });
   };
 
   /* -------------------------- Effects & listeners -------------------------- */
-
-  // Keep calendar date in sync with state
   useEffect(() => {
     const api = calendarRef.current?.getApi?.();
     api?.gotoDate(currentDate);
   }, [currentDate]);
 
-  // Prefer API scroll; verify and fallback to manual after mount
   useEffect(() => {
     const api = calendarRef.current?.getApi?.();
     if (!api) return;
 
-    // Ask FC to scroll; then fallback if it looks unchanged.
     api.scrollToTime(defaultScrollTime);
 
-    // Give the DOM a tick to render before checking
     const id = requestAnimationFrame(() => {
-      // Heuristic: if scroller is still near top during mid-day, apply fallback
       const calEl = api.el;
       const scroller =
         calEl.querySelector('.fc-timegrid-body .fc-scroller') ||
@@ -241,12 +288,10 @@ const CalendarPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep custom header aligned whenever resources/date change (layout effect avoids flash)
   useLayoutEffect(() => {
     syncResourceHeader();
   }, [resources, currentDate]);
 
-  // Observe FC grid size changes and window resizes for robust syncing
   useEffect(() => {
     const grid = document.querySelector('.fc-timegrid');
     const ro = new ResizeObserver(() => syncResourceHeader());
@@ -255,12 +300,9 @@ const CalendarPage = () => {
     const onResize = () => syncResourceHeader();
     window.addEventListener('resize', onResize);
 
-    // Also hook into FC datesSet for reflows after navigation
     const api = calendarRef.current?.getApi?.();
     const onDatesSet = () => {
-      // Sync header widths and keep scroll position intent
       syncResourceHeader();
-      // Try native scroll again, then fallback; this helps on view/date changes
       api.scrollToTime(defaultScrollTime);
       const id = requestAnimationFrame(() => {
         const calEl = api.el;
@@ -272,12 +314,10 @@ const CalendarPage = () => {
           scrollToCurrentTimeMinusTwoHours();
         }
       });
-      // cleanup of RAF is fine but not critical here
       return () => cancelAnimationFrame(id);
     };
     api?.on('datesSet', onDatesSet);
 
-    // initial sync
     syncResourceHeader();
 
     return () => {
@@ -288,73 +328,26 @@ const CalendarPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
-  const startHorizontalResize = (fcEvent, direction, mouseDownEvent) => {
-    mouseDownEvent.preventDefault();
-    mouseDownEvent.stopPropagation();
-
-    const currentIds = fcEvent.getResources().map((r) => r.id);
-    if (!currentIds.length) return;
-
-    // Current contiguous span indices
-    const indices = currentIds.map((id) => resourceOrder.indexOf(id)).filter((i) => i >= 0);
-    const minIdx = Math.min(...indices);
-    const maxIdx = Math.max(...indices);
-
-    const rects = getResourceRects();
-    if (!rects.length) return;
-
-    hDragRef.current = {
-      active: true,
-      eventId: fcEvent.id,
-      direction,
-      anchorIdx: direction === 'left' ? maxIdx : minIdx, // opposite edge is fixed
-      rects,
-    };
-
-    document.body.classList.add('no-select');
-    document.body.style.cursor = 'ew-resize';
-
-    const onMove = (e) => {
-      if (!hDragRef.current.active) return;
-      const { anchorIdx, rects } = hDragRef.current;
-
-      // Which resource column is the cursor over?
-      const overIdxRaw = idxForClientX(e.clientX, rects);
-      const overIdx = clamp(overIdxRaw, 0, resourceOrder.length - 1);
-
-      // Determine new span
-      let startIdx, endIdx;
-      if (hDragRef.current.direction === 'left') {
-        startIdx = Math.min(overIdx, anchorIdx);
-        endIdx = anchorIdx;
-      } else {
-        startIdx = anchorIdx;
-        endIdx = Math.max(overIdx, anchorIdx);
-      }
-
-      const newIds = buildSpanIds(startIdx, endIdx);
-
-      // Live preview by updating React state for the specific event
-      setEvents((prev) =>
-        prev.map((evt) => (evt.id === hDragRef.current.eventId ? { ...evt, resourceIds: newIds } : evt))
-      );
-    };
-
-    const onUp = () => {
-      // Commit already happened via setEvents on move; just cleanup
-      hDragRef.current.active = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.body.classList.remove('no-select');
-      document.body.style.cursor = '';
-    };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
-
   /* ------------------------------ Handlers ------------------------------ */
+  const getResourceRects = () => {
+    const allCols = Array.from(document.querySelectorAll('.fc-timegrid-col'));
+    return allCols.slice(1).map((el) => el.getBoundingClientRect());
+  };
+  const clamp = (val, lo, hi) => Math.max(lo, Math.min(hi, val));
+  const buildSpanIds = (startIdx, endIdx) => {
+    const lo = Math.min(startIdx, endIdx);
+    const hi = Math.max(startIdx, endIdx);
+    return resourceOrder.slice(lo, hi + 1);
+  };
+  const idxForClientX = (clientX, rects) => {
+    if (!rects.length) return -1;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      if (clientX >= r.left && clientX <= r.right) return i;
+    }
+    if (clientX < rects[0].left) return 0;
+    return rects.length - 1;
+  };
 
   const handleRemoveColumn = (resourceId) => {
     setResources((prev) => prev.filter((res) => res.id !== resourceId));
@@ -420,21 +413,18 @@ const CalendarPage = () => {
       start: event.start,
       end: event.end,
       resourceIds: event.getResources().map((r) => r.id),
-      extendedProps: event.extendedProps
+      extendedProps: event.extendedProps,
     };
     setEvents((prevEvents) => prevEvents.map((evt) => (evt.id === updated.id ? updated : evt)));
   };
 
-  // Create by clicking/dragging a selection block; capture resource column
   const handleSelect = (selectInfo) => {
     const start = selectInfo.start;
     const end = addMinutes(start, 30);
     const resourceId =
       selectInfo.resource?.id ||
-      // some builds store it here:
       selectInfo.jsEvent?.target?.getAttribute?.('data-resource-id') ||
       null;
-
     const defaults = resourceId ? [resourceId] : [];
     openCreateModal(start, end, defaults);
   };
@@ -445,12 +435,71 @@ const CalendarPage = () => {
     const id = resourceIdCounter.toString();
     setResourceIdCounter((prev) => prev + 1);
     setResources((prev) => [...prev, { id, title: name, people: [] }]);
-    // Re-sync after next paint
     requestAnimationFrame(syncResourceHeader);
   };
 
   const handleDateNavigate = (days) => {
     setCurrentDate((prev) => new Date(prev.getTime() + days * 24 * 60 * 60 * 1000));
+  };
+
+  const startHorizontalResize = (fcEvent, direction, mouseDownEvent) => {
+    mouseDownEvent.preventDefault();
+    mouseDownEvent.stopPropagation();
+
+    const currentIds = fcEvent.getResources().map((r) => r.id);
+    if (!currentIds.length) return;
+
+    const indices = currentIds.map((id) => resourceOrder.indexOf(id)).filter((i) => i >= 0);
+    const minIdx = Math.min(...indices);
+    const maxIdx = Math.max(...indices);
+
+    const rects = getResourceRects();
+    if (!rects.length) return;
+
+    hDragRef.current = {
+      active: true,
+      eventId: fcEvent.id,
+      direction,
+      anchorIdx: direction === 'left' ? maxIdx : minIdx,
+      rects,
+    };
+
+    document.body.classList.add('no-select');
+    document.body.style.cursor = 'ew-resize';
+
+    const onMove = (e) => {
+      if (!hDragRef.current.active) return;
+      const { anchorIdx, rects } = hDragRef.current;
+
+      const overIdxRaw = idxForClientX(e.clientX, rects);
+      const overIdx = clamp(overIdxRaw, 0, resourceOrder.length - 1);
+
+      let startIdx, endIdx;
+      if (hDragRef.current.direction === 'left') {
+        startIdx = Math.min(overIdx, anchorIdx);
+        endIdx = anchorIdx;
+      } else {
+        startIdx = anchorIdx;
+        endIdx = Math.max(overIdx, anchorIdx);
+      }
+
+      const newIds = buildSpanIds(startIdx, endIdx);
+
+      setEvents((prev) =>
+        prev.map((evt) => (evt.id === hDragRef.current.eventId ? { ...evt, resourceIds: newIds } : evt))
+      );
+    };
+
+    const onUp = () => {
+      hDragRef.current.active = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('no-select');
+      document.body.style.cursor = '';
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   };
 
   const renderEventContent = (eventInfo) => {
@@ -464,7 +513,7 @@ const CalendarPage = () => {
 
     return (
       <div className="custom-event">
-        {/* Horizontal span handles */}
+        {/* horizontal span handles kept for future */}
         <div
           className="h-resize-handle h-resize-handle--left"
           onMouseDown={(e) => startHorizontalResize(event, 'left', e)}
@@ -490,7 +539,6 @@ const CalendarPage = () => {
   };
 
   /* -------------------------------- Render -------------------------------- */
-
   return (
     <div className="calendar-page">
       <CalendarHeader
@@ -504,6 +552,11 @@ const CalendarPage = () => {
           end.setHours(8, 30, 0, 0);
           openCreateModal(start, end);
         }}
+        /** NEW: template controls */
+        templates={Object.keys(templates)}
+        onSaveTemplate={handleSaveTemplate}
+        onApplyTemplate={handleApplyTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
       />
 
       {/* Custom resource header row that mirrors FC resource columns */}
@@ -517,9 +570,7 @@ const CalendarPage = () => {
                   resource.people.map((person, index) => (
                     <div className="person-chip" key={`${resource.id}-${index}`}>
                       {person}
-                      <span className="arrow-down" aria-hidden="true">
-                        ▾
-                      </span>
+                      <span className="arrow-down" aria-hidden="true">▾</span>
                     </div>
                   ))}
                 <button
@@ -563,7 +614,7 @@ const CalendarPage = () => {
           scrollTime={defaultScrollTime}
           scrollTimeReset={false}
           editable={true}
-          eventDurationEditable={true}        // explicit: allow resize
+          eventDurationEditable={true}
           eventResizableFromStart={true}
           dragScroll={true}
           selectable={true}
@@ -576,10 +627,7 @@ const CalendarPage = () => {
           eventResize={handleEventChange}
           eventContent={renderEventContent}
           slotLabelFormat={{ hour: 'numeric', minute: '2-digit', hour12: true }}
-          // We still keep a datesSet handler to re-sync widths and reinforce scroll intent.
           datesSet={() => {
-            // The ResizeObserver + global datesSet hook also handle this, but an extra call
-            // here ensures correctness even if observers miss a micro-change.
             syncResourceHeader();
           }}
         />
@@ -591,7 +639,7 @@ const CalendarPage = () => {
           start={modalStart}
           end={modalEnd}
           resources={resources}
-          defaultResourceIds={defaultModalResourceIds} // Safe extra prop; ignore if modal doesn’t use it
+          defaultResourceIds={defaultModalResourceIds}
           onClose={() => setModalOpen(false)}
           onSave={handleSaveEvent}
         />
