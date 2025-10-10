@@ -6,6 +6,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 import CalendarHeader from './CalendarHeader';
 import EventModal from './EventModal';
 import { addMinutes } from '../lib/calendarUtils';
+import AddColumnModal from './AddColumnModal';
+import AddPeopleModal from './AddPeopleModal';
 
 import '../styles/Calendar.css';
 
@@ -47,6 +49,11 @@ const INITIAL_EVENTS = [
   },
 ];
 
+const ALL_USERS = [
+  'Alice', 'Bob', 'Charlie', 'Diana', 'Ethan',
+  'Fiona', 'Grace', 'Henry', 'Ivy', 'Jack',
+];
+
 /* ------------------------------ Component ------------------------------ */
 const CalendarPage = () => {
   const [events, setEvents] = useState(INITIAL_EVENTS);
@@ -54,9 +61,9 @@ const CalendarPage = () => {
   const [resourceIdCounter, setResourceIdCounter] = useState(4);
 
   const [resources, setResources] = useState([
-    { id: '1', title: 'Generalist', people: ['Kunwar'] },
-    { id: '2', title: 'Clinical', people: ['Robert', 'Sona', 'Munavar'] },
-    { id: '3', title: 'Physical Environment', people: ['Joblin'] },
+    { id: '1', title: 'Generalist', people: [] },
+    { id: '2', title: 'Clinical', people: [] },
+    { id: '3', title: 'Physical Environment', people: [] },
   ]);
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -70,6 +77,15 @@ const CalendarPage = () => {
   const [modalStart, setModalStart] = useState(null);
   const [modalEnd, setModalEnd] = useState(null);
   const [defaultModalResourceIds, setDefaultModalResourceIds] = useState([]);
+
+  // ...inside component state (near other modals)
+  const [addColOpen, setAddColOpen] = useState(false);
+
+  const [peopleModalOpen, setPeopleModalOpen] = useState(false);
+  const [peopleModalResourceId, setPeopleModalResourceId] = useState(null);
+
+  // replace old handleAddColumn with this:
+  const openAddColumnModal = () => setAddColOpen(true);
 
   const calendarRef = useRef(null);
 
@@ -429,12 +445,11 @@ const CalendarPage = () => {
     openCreateModal(start, end, defaults);
   };
 
-  const handleAddColumn = () => {
-    const name = window.prompt('Enter column name:');
-    if (!name) return;
+  const handleAddColumn = ({ title }) => {
     const id = resourceIdCounter.toString();
-    setResourceIdCounter((prev) => prev + 1);
-    setResources((prev) => [...prev, { id, title: name, people: [] }]);
+    setResourceIdCounter(prev => prev + 1);
+    setResources(prev => [...prev, { id, title, people: [] }]);
+    setAddColOpen(false);
     requestAnimationFrame(syncResourceHeader);
   };
 
@@ -502,6 +517,23 @@ const CalendarPage = () => {
     document.addEventListener('mouseup', onUp);
   };
 
+  const openPeopleModal = (resourceId) => {
+    setPeopleModalResourceId(resourceId);
+    setPeopleModalOpen(true);
+  };
+
+  const handleSavePeople = (selectedPeople) => {
+    setResources(prev => prev.map(r => {
+      if (r.id !== peopleModalResourceId) return r;
+      // merge without duplicates, preserve order: existing first, then new ones not present
+      const existing = Array.isArray(r.people) ? r.people : [];
+      const toAdd = selectedPeople.filter(p => !existing.includes(p));
+      return { ...r, people: [...existing, ...toAdd] };
+    }));
+    setPeopleModalOpen(false);
+    setPeopleModalResourceId(null);
+  };
+
   const renderEventContent = (eventInfo) => {
     const { event } = eventInfo;
     const start = event.start;
@@ -544,7 +576,7 @@ const CalendarPage = () => {
       <CalendarHeader
         currentDate={currentDate}
         onDateNavigate={handleDateNavigate}
-        onAddColumn={handleAddColumn}
+        onAddColumn={openAddColumnModal}
         onNewEvent={() => {
           const start = new Date(currentDate);
           start.setHours(8, 0, 0, 0);
@@ -575,7 +607,7 @@ const CalendarPage = () => {
                   ))}
                 <button
                   className="add-people-btn"
-                  onClick={() => alert('Add person not implemented')}
+                  onClick={() => openPeopleModal(resource.id)}
                   aria-label={`Add person to ${resource.title}`}
                   title={`Add person to ${resource.title}`}
                 >
@@ -642,6 +674,25 @@ const CalendarPage = () => {
           defaultResourceIds={defaultModalResourceIds}
           onClose={() => setModalOpen(false)}
           onSave={handleSaveEvent}
+        />
+      )}
+
+      {addColOpen && (
+        <AddColumnModal
+          open={addColOpen}
+          onCancel={() => setAddColOpen(false)}
+          onSave={handleAddColumn}
+        />
+      )}
+
+      {peopleModalOpen && (
+        <AddPeopleModal
+          open={peopleModalOpen}
+          resourceTitle={resources.find(r => r.id === peopleModalResourceId)?.title}
+          allUsers={ALL_USERS}
+          initialSelected={resources.find(r => r.id === peopleModalResourceId)?.people || []}
+          onCancel={() => { setPeopleModalOpen(false); setPeopleModalResourceId(null); }}
+          onSave={handleSavePeople}
         />
       )}
     </div>
