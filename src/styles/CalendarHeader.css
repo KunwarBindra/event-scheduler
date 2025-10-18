@@ -1,70 +1,164 @@
-/*
- * Simplified header styles for the day view.  The header consists of
- * navigation arrows, a date display and two vertically stacked action
- * buttons aligned to the right.  Static elements from the previous
- * design such as an avatar and extra pickers have been removed.
- */
-
- .calendar-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e9f0;
+/* Overall header */
+.calendar-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e9f0;
   padding: 0.75rem 1rem;
-}
-
-/* Navigation container: holds the arrows and date label. */
-.header-nav {
   display: flex;
   align-items: center;
-  font-size: 16px;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* Date text styling */
-.date-display {
-  font-weight: 600;
-  color: #1f2937;
-  margin-top: 2.5px;
-}
-
-/* Navigation buttons: simple arrow icons. */
-.nav-button {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #374151;
-  padding: 0.1rem 0.4rem;
-  line-height: 1;
-}
-.nav-button:hover {
-  color: #007aff;
-}
-
-/* Container for action buttons.  Align items to end to stack vertically. */
-.header-buttons {
+/* Left side */
+.header-left {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-/* New event and add column buttons share similar styling. */
-.new-event-button,
-.add-column-button {
-  background-color: #4590eb;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.45rem 1rem;
-  font-size: 0.8rem;
+.date-display {
+  font-weight: 700;
+  color: #111827;
+  font-size: 1rem;
+  letter-spacing: 0.2px;
+  margin: 0 0.25rem;
+}
+
+/* Right side */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1;
   cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
   white-space: nowrap;
 }
 
-.new-event-button:hover,
-.add-column-button:hover {
-  background-color: #005cbf;
+.btn-primary {
+  background: #4590eb;
+  color: #fff;
+  border-color: #4590eb;
 }
+.btn-primary:hover { background: #2f7edd; border-color: #2f7edd; }
+
+.btn-secondary {
+  background: #eef4ff;
+  color: #1e40af;
+  border-color: #c7d2fe;
+}
+.btn-secondary:hover { background: #e2ecff; }
+
+.btn-outline {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.btn-outline:hover { background: #f8fafc; }
+
+.btn-light {
+  background: #fff;
+  color: #111827;
+  border-color: #e5e7eb;
+}
+.btn-light:hover { background: #f9fafb; }
+
+.icon-button {
+  height: 32px;
+  width: 32px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.icon-button:hover { background: #f9fafb; }
+
+/* little vertical separator */
+.divider {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  margin: 0 0.25rem;
+}
+
+/* Templates dropdown */
+.templates {
+  position: relative;
+}
+.templates-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.caret { font-size: 0.85em; color: #6b7280; }
+
+.templates-menu {
+  position: absolute;
+  right: 0;
+  margin-top: 6px;
+  min-width: 220px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(16,24,40,.08), 0 2px 8px rgba(16,24,40,.06);
+  padding: 6px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.templates-empty {
+  padding: 10px 12px;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.templates-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.templates-item:hover { background: #f5f7fb; }
+
+.templates-name {
+  color: #111827;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templates-delete {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+}
+.templates-delete:hover { background: #f3f4f6; color: #ef4444; }
+
+.trash { display: block; }
+
+/* Make buttons look crisp on macOS */
+button, select { -webkit-font-smoothing: antialiased; }

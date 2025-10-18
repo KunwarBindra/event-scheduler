@@ -127,7 +127,6 @@
 
 .field input[type="text"],
 .field input[type="datetime-local"] {
-  width: 100%;
   appearance: none;
   outline: none;
   border: 1px solid var(--border);
